@@ -2,24 +2,23 @@
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
 #include <unistd.h>
 
-#define SYNC_BYTE 'G'
-
-#define CONTROL_FIELDS_OFFSET ((8 + 1 + 1 + 1 + 13 + 2) / 8)
-
-#define TP_HDR_SIZE 4
-
-#define TP_DATA_SIZE 184
-
-#define TP_SIZE (TP_HDR_SIZE + TP_DATA_SIZE)
-
-#define PID_MASK ((unsigned short)((~0) & (~(0b111 << 13))))
+#include "common.h"
+#include "pat.h"
 
 int main(int argc, char *argv[]) {
-  char buf[TP_SIZE];
-  size_t buf_size = 0;
   int fd;
+  ts_packet_buf buf;
+  size_t buf_size = 0;
+
+  program_numbers_t program_numbers;
+  program_numbers.next = NULL;
+
+  pat_t pat;
+  init_pat(&pat);
 
   if (argc != 2) {
     fprintf(stderr, "Usage: %s filename\n", argv[0]);
@@ -38,15 +37,33 @@ int main(int argc, char *argv[]) {
       perror("read");
       exit(EXIT_FAILURE);
     }
-    if (buf_size < TP_SIZE) {
-      printf("buf size < TP_SIZE\n");
-      return 0;
+
+    if (buf_size == 0) {
+      break;
     }
 
-    unsigned short pid = *(unsigned short *)(buf + 1) & PID_MASK;
-    /*if (pid == 0) {*/
-    /*}*/
+    if (buf_size != TS_PACKET_SIZE) {
+      /*fprintf(stderr, "read less than ts packet size (%lu bytes)\n", buf_size);*/
+      break;
+    }
+
+    if (read_pat(&pat, buf) == -1) {
+      continue;
+    }
   }
+
+  if (extract_program_numbers(&program_numbers, &pat)) {
+    fprintf(stderr, "failed to extract program numbers\n");
+  }
+
+  for (pn_node_t *node = program_numbers.next; node != NULL;
+       node = node->next) {
+    printf("transport stream: %hu, program %hu: program map pid = %hu\n", node->ts_id, node->program_number,
+           node->program_map_pid);
+  }
+
+  free_program_numbers(&program_numbers);
+  free_pat(&pat);
 
   return 0;
 }
