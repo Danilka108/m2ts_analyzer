@@ -9,12 +9,11 @@
 #define PAS_LEN (8 + 1 + 1 + 2 + 12 + 1021)
 #define CAPACITY_RESIZE_FACTOR 2
 
-u_int8_t *extract_pat_sections(ts_packet_buf buf, size_t *len);
+/*u_int8_t *extract_pat_sections(ts_packet_buf buf, size_t *len);*/
 
-int extract_pas_program_numbers(program_numbers_t *list, u_int8_t **buf,
-                                size_t *size);
+int extract_pas_program_numbers(programs_t *list, u_int8_t **buf, size_t *size);
 
-void add_program_number(program_numbers_t *list, u_int16_t ts_id,
+void add_program_number(programs_t *list, u_int16_t ts_id,
                         u_int16_t program_number, u_int16_t program_map_pid);
 
 void init_pat(pat_t *pat) {
@@ -32,7 +31,8 @@ int read_pat(pat_t *pat, ts_packet_buf buf) {
   size_t len = 0;
   u_int8_t *data = NULL;
 
-  data = extract_pat_sections(buf, &len);
+  data = extract_table_sections(0, buf, &len);
+  /*data = extract_pat_sections(buf, &len);*/
   if (data == NULL) {
     return -1;
   }
@@ -60,6 +60,7 @@ int read_pat(pat_t *pat, ts_packet_buf buf) {
 
 void free_pat(pat_t *pat) { free(pat->data); }
 
+/*
 u_int8_t *extract_pat_sections(ts_packet_buf buf, size_t *len) {
   u_int8_t sync_byte = *buf;
   u_int8_t transport_error_indicator = (*(u_int8_t *)(buf + 1) >> 7) & 0b1;
@@ -94,33 +95,34 @@ u_int8_t *extract_pat_sections(ts_packet_buf buf, size_t *len) {
   }
 
   if (len != NULL) {
-    /**len = TS_PACKET_SIZE - (data_start - buf) + 1;*/
+    // *len = TS_PACKET_SIZE - (data_start - buf) + 1;
     *len = TS_PACKET_SIZE - (data_start - buf);
   }
 
   return data_start;
 }
+*/
 
-int extract_program_numbers(program_numbers_t *list, pat_t *pat) {
+int extract_program_numbers(programs_t *list, pat_t *pat) {
   u_int8_t *buf = pat->data;
   size_t size = pat->size;
   int result = 0;
 
   while (result != 1) {
     result = extract_pas_program_numbers(list, &buf, &size);
-    if (result == -1) {
-      fprintf(stderr, "failed to extract pas program numbers\n");
-      return -1;
-    }
+    /*if (result == -1) {*/
+    /*  fprintf(stderr, "failed to extract pas program numbers\n");*/
+    /*  return -1;*/
+    /*}*/
   }
 
   return 0;
 }
 
-int extract_pas_program_numbers(program_numbers_t *list, u_int8_t **buf,
+int extract_pas_program_numbers(programs_t *list, u_int8_t **buf,
                                 size_t *size) {
   if (*size < 12) {
-    return -1;
+    return 1;
   }
 
   u_int8_t *hdr_start = *buf + 1 + **buf;
@@ -142,27 +144,32 @@ int extract_pas_program_numbers(program_numbers_t *list, u_int8_t **buf,
   u_int16_t program_map_pid;
 
   if (table_id != 0) {
-    return -1;
+    end_extracting(buf, size, crc_32);
+    return 0;
   }
 
   if (section_syntax_indicator != 1) {
-    return -1;
+    end_extracting(buf, size, crc_32);
+    return 0;
   }
 
   if (zero_field != 0) {
-    return -1;
+    end_extracting(buf, size, crc_32);
+    return 0;
   }
 
   if (section_length > 1021) {
-    return -1;
+    end_extracting(buf, size, crc_32);
+    return 0;
   }
 
   if (current_next_indicator == 0) {
-    return -1;
+    end_extracting(buf, size, crc_32);
+    return 0;
   }
 
   if (*size < (crc_32 + 4) - *buf) {
-    return -1;
+    return 1;
   }
 
   for (; program_number_start < crc_32; program_number_start += 4) {
@@ -186,22 +193,18 @@ int extract_pas_program_numbers(program_numbers_t *list, u_int8_t **buf,
     *buf += 1;
   }
 
-  if (section_number == last_section_number) {
-    return 1;
-  }
-
   return 0;
 }
 
-void add_program_number(program_numbers_t *list, u_int16_t ts_id,
+void add_program_number(programs_t *list, u_int16_t ts_id,
                         u_int16_t program_number, u_int16_t program_map_pid) {
-  for (pn_node_t *node = list->next; node != NULL; node = node->next) {
-    if (node->program_number == program_number && ts_id == node->ts_id) {
+  for (program_t *node = list->next; node != NULL; node = node->next) {
+    if (node->program_number == program_number) {
       return;
     }
   }
 
-  pn_node_t *new_node = malloc(sizeof(pn_node_t));
+  program_t *new_node = malloc(sizeof(program_t));
   if (new_node == NULL) {
     perror("malloc");
     exit(EXIT_FAILURE);
@@ -209,14 +212,21 @@ void add_program_number(program_numbers_t *list, u_int16_t ts_id,
 
   new_node->next = list->next;
   list->next = new_node;
-  new_node->ts_id = ts_id;
   new_node->program_number = program_number;
   new_node->program_map_pid = program_map_pid;
+  new_node->streams_size = 0;
+  new_node->pmt_buf.data = malloc(TS_PACKET_SIZE);
+  if (new_node->pmt_buf.data == NULL) {
+    perror("malloc");
+    exit(EXIT_FAILURE);
+  }
+  new_node->pmt_buf.size = 0;
+  new_node->pmt_buf.capacity = TS_PACKET_SIZE;
 }
 
-void free_program_numbers(program_numbers_t *list) {
-  pn_node_t *node = list->next;
-  pn_node_t *node_to_free = NULL;
+void free_program_numbers(programs_t *list) {
+  program_t *node = list->next;
+  program_t *node_to_free = NULL;
 
   list->next = NULL;
 
