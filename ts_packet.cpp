@@ -1,26 +1,17 @@
 #include "ts_packet.h"
 #include "common.h"
-#include <cstdint>
 
-#define MASK(n) ((1 << (n)) - 1)
-#define GET_BIT(ptr, index) ((uint8_t)((*(uint8_t *)(ptr) >> (index)) & 0x1))
-#define GET_BITS(ptr, start_index, end_index)                                  \
-  ((uint8_t)((*(uint8_t *)(ptr) >> (start_index)) &                            \
-             MASK(end_index - start_index)))
-#define GET_SHORT(ptr) (((uint16_t)(*(ptr)) << 8) | (uint16_t)(*(ptr + 1)))
+uint8_t *calc_data_ptr(ts_packet_buf &buf, uint8_t afc);
 
-ts_packet::ts_packet(ts_packet_buf *buf)
-    : sync_byte(*buf->data),
-      transport_error_indicator(GET_BIT(buf->data + 1, 7)),
-      payload_until_start_indicator(GET_BIT(buf->data + 1, 6)),
-      pid(GET_SHORT(buf->data + 1) & MASK(13)),
-      adaptation_field_control(GET_BITS(buf->data + 3, 4, 6)), buf(buf),
-      continuity_counter(GET_BITS(buf->data + 3, 0, 4)),
-      data(buf->data + TS_PACKET_HDR_SIZE) {
-  if (adaptation_field_control == 0b10 || adaptation_field_control == 0b11) {
-    data += *data;
-  }
-}
+ts_packet::ts_packet(ts_packet_buf &buf)
+    : buf(buf), sync_byte(*buf.data),
+      transport_error_indicator(GET_BIT(buf.data + 1, 7)),
+      payload_until_start_indicator(GET_BIT(buf.data + 1, 6)),
+      pid(GET_SHORT(buf.data + 1) & MASK(13)),
+      adaptation_field_control(GET_BITS(buf.data + 3, 4, 6)),
+      continuity_counter(GET_BITS(buf.data + 3, 0, 4)),
+      data(calc_data_ptr(buf, adaptation_field_control)),
+      end(buf.data + TS_PACKET_SIZE), data_len(end - data) {}
 
 bool ts_packet::is_valid() {
   if (sync_byte != SYNC_BYTE) {
@@ -36,4 +27,24 @@ bool ts_packet::is_valid() {
   }
 
   return true;
+}
+
+bool ts_packet::is_continuous(int8_t last_cc) {
+  bool is_discontinuity = (adaptation_field_control & 2) && buf.data[4] > 0 &&
+                          ((buf.data[5] >> 7) & 1);
+  uint8_t expected_cc =
+      adaptation_field_control & 1 ? ((last_cc - 1) & 0x1FFF) : last_cc;
+
+  return pid == NULL_PACKET_PID || is_discontinuity || last_cc < 0 ||
+         expected_cc == continuity_counter;
+}
+
+uint8_t *calc_data_ptr(ts_packet_buf &buf, uint8_t afc) {
+  uint8_t *data = buf.data + TS_PACKET_HDR_SIZE;
+
+  if (afc == 0b10 || afc == 0b11) {
+    data += *data;
+  }
+
+  return data;
 }
