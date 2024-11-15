@@ -5,19 +5,19 @@
 #include <cstdint>
 #include <optional>
 
-struct ts_packet_buf {
-  uint8_t data[TS_PACKET_SIZE];
+struct TsPacketBuf {
+  uint8_t *data;
 };
 
-struct ts_packet {
+struct TsPacket {
 public:
-  ts_packet(ts_packet_buf &buf);
+  TsPacket(TsPacketBuf &buf);
 
   bool is_valid();
 
   bool is_continuous(int8_t last_cc);
 
-  ts_packet_buf &buf;
+  TsPacketBuf &buf;
 
   const uint8_t sync_byte;
   const uint8_t transport_error_indicator;

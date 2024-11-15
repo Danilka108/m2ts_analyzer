@@ -17,7 +17,9 @@
 
 #define PAT_PID 0
 
-#define PAT_TABLE_ID 0
+#define PAT_TABLE_ID 0x00
+
+#define PMT_TABLE_ID 0x01
 
 /*#define SECTION_LENGTH_FIELD_MAX_VAL 1021*/
 #define PAS_MAX_SIZE 1024
