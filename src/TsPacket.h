@@ -1,11 +1,11 @@
 #ifndef M2TS_ANALYZER_TS_PACKET
 #define M2TS_ANALYZER_TS_PACKET
 
-#include "common.h"
+#include <cstddef>
 #include <cstdint>
-#include <optional>
 
 struct TsPacketBuf {
+public:
   uint8_t *data;
 };
 

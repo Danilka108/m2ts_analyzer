@@ -1,20 +1,24 @@
 #include "TsPacket.h"
+
 #include "common.h"
 
 uint8_t *calc_data_ptr(TsPacketBuf &buf, uint8_t afc);
 
 TsPacket::TsPacket(TsPacketBuf &buf)
-    : buf(buf), sync_byte(*buf.data),
+    : buf(buf),
+      sync_byte(*buf.data),
       transport_error_indicator(GET_BIT(buf.data + 1, 7)),
       payload_until_start_indicator(GET_BIT(buf.data + 1, 6)),
       pid(GET_SHORT(buf.data + 1) & MASK(13)),
       adaptation_field_control(GET_BITS(buf.data + 3, 4, 6)),
       continuity_counter(GET_BITS(buf.data + 3, 0, 4)),
       data(calc_data_ptr(buf, adaptation_field_control)),
-      end(buf.data + TS_PACKET_SIZE), data_len(end - data) {}
+      end(buf.data + TS_PACKET_SIZE),
+      data_len(end - data) {
+}
 
 bool TsPacket::is_valid() {
-  if (sync_byte != SYNC_BYTE) {
+  if (sync_byte != 'G') {
     return false;
   }
 

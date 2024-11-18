@@ -1,0 +1,17 @@
+Language: Cpp
+AllowShortFunctionsOnASingleLine: Empty
+PackConstructorInitializers: Never
+BreakBeforeConceptDeclarations: Always
+# BreakTemplateDeclarations: Yes
+BreakBeforeTernaryOperators: true
+EmptyLineBeforeAccessModifier: LogicalBlock
+FixNamespaceComments: true
+IncludeBlocks: Regroup
+IndentAccessModifiers: false
+IndentCaseBlocks: false
+IndentCaseLabels: false
+InsertBraces: true
+# InsertTrailingCommas: Wrapped
+SpaceBeforeCpp11BracedList: true
+SpaceBeforeCtorInitializerColon: false
+SpaceBeforeInheritanceColon: false

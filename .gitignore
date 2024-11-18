@@ -1,3 +1,14 @@
+build/
+
+compile_commands.json
+
+.cache
+
+# mpeg
+*.mpg
+*.m2ts
+*.mpeg
+
 # Prerequisites
 *.d
 

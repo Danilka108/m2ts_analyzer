@@ -3,7 +3,7 @@
 
 #include <sys/types.h>
 
-#define SYNC_BYTE 'G'
+/*#define SYNC_BYTE 'G'*/
 
 #define NULL_PACKET_PID 0x1FFF
 
@@ -15,7 +15,7 @@
 
 #define TS_PACKET_SIZE (TS_PACKET_HDR_SIZE + TS_PACKET_DATA_SIZE)
 
-#define PAT_PID 0
+/*#define PAT_PID 0*/
 
 #define PAT_TABLE_ID 0x00
 
@@ -30,7 +30,7 @@
 
 #define PAS_MIN_SIZE (PAS_HDR_SIZE + PAS_CRC_32_SIZE)
 
-#define STUFFING_BYTE 0xFF
+/*#define STUFFING_BYTE 0xFF*/
 
 #define MASK(n) ((1 << (n)) - 1)
 #define GET_BIT(ptr, index) ((uint8_t)((*(uint8_t *)(ptr) >> (index)) & 0x1))
@@ -38,7 +38,6 @@
   ((uint8_t)((*(uint8_t *)(ptr) >> (start_index)) &                            \
              MASK(end_index - start_index)))
 #define GET_SHORT(ptr) (((uint16_t)(*(ptr)) << 8) | (uint16_t)(*((ptr) + 1)))
-
 
 /*typedef u_int8_t ts_packet_buf[TS_PACKET_SIZE];*/
 
