@@ -1,9 +1,14 @@
 Language: Cpp
-AllowShortFunctionsOnASingleLine: Empty
+BasedOnStyle: Google
+IndentWidth: 2
+# AllowShortFunctionsOnASingleLine: true
+# MaxEmptyLinesToKeep: 1
 PackConstructorInitializers: Never
-BreakBeforeConceptDeclarations: Always
-# BreakTemplateDeclarations: Yes
-BreakBeforeTernaryOperators: true
+# BreakBeforeConceptDeclarations: Always
+# BreakTemplateDeclarations: Always
+# BreakBeforeTernaryOperators: Always
+# BreakTemplateDeclarations: true
+# BreakBeforeTernaryOperators: true
 EmptyLineBeforeAccessModifier: LogicalBlock
 FixNamespaceComments: true
 IncludeBlocks: Regroup

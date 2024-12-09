@@ -1,32 +1,34 @@
-#ifndef M2TS_ANALYZER_PACKETS_HANDLER_H
-#define M2TS_ANALYZER_PACKETS_HANDLER_H
+#ifndef MPEGTS_ANALYZER_TS_PARSER_H
+#define MPEGTS_ANALYZER_TS_PARSER_H
 
 #include "Context.h"
-#include "PatParser.h"
-#include "PmtParser.h"
-#include "SdtParser.h"
-#include "TsPacket.h"
-#include <ostream>
+#include "stream/Stream.h"
 
-class StreamParser {
+struct StreamParser {
 public:
-  StreamParser();
+  StreamParser(std::unique_ptr<Stream> stream)
+      : ctx(), stream(std::move(stream)) {}
 
-  void parse_packet(TsPacketBuf buf);
+  void parse();
 
-  /*bool is_stopped();*/
-
-  friend std::ostream &operator<<(std::ostream &, const StreamParser &);
+  template <size_t S> void print_programs(Indent<S> indent, std::ostream &os);
 
 private:
   Context ctx;
-
-  PatParser pat_parser;
-  SdtParser sdt_parser;
-
-  bool stopped;
+  std::unique_ptr<Stream> stream;
 };
 
-std::ostream &operator<<(std::ostream &os, const StreamParser &parser);
+template <size_t S>
+void StreamParser::print_programs(Indent<S> indent, std::ostream &os) {
+  for (auto it = ctx.pat.programs_begin(); it != ctx.pat.programs_end(); ++it) {
+    auto found_pmt = ctx.pmts.find(it->number());
+    if (found_pmt == ctx.pmts.end()) {
+      continue;
+    }
+
+    PmtTable &pmt = found_pmt->second;
+    it->print(pmt.streams_begin(), pmt.streams_end(), indent, os);
+  }
+}
 
 #endif
